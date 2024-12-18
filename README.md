@@ -11,4 +11,4 @@ The reason for the temporary playbook is if you have 400+ open ssh connections i
 
 The script also generates a list of units it wasn't able to touch, so if you need to go back and do those ones, you can just change out the hosts file to target them.
 
-The key is addedd to authorized hosts on the specified user on both the remote and ansible server to enable two way comms using the same key.
+The key is added to authorized hosts on the specified user on both the remote and ansible server to enable two way comms using the same key.
