@@ -30,6 +30,8 @@ while IFS= read -r HOST; do
 ---
     - name: Push SSH public key to target host
       hosts: "$HOST"
+      vars:
+        random_password: "{{ lookup('pipe', 'openssl rand -base64 32') }}"
       tasks:
         - name: Ensure the user '$USER' exists
           user:
@@ -37,8 +39,21 @@ while IFS= read -r HOST; do
             state: present
             create_home: yes
             shell: /bin/bash
-            groups: sudo  # Add to sudo
-          become: yes  
+            groups: sudo
+            password: "{{ random_password | password_hash('sha512') }}"
+            password_lock: yes  # Disable password login
+            expires: -1        # Remove password expiry
+            password_expire_max: 2000
+          become: yes
+
+        - name: Allow ansible user to use sudo without password
+          become: yes
+          lineinfile:
+            path: /etc/sudoers.d/ansible
+            line: "ansible ALL=(ALL) NOPASSWD:ALL"
+            create: yes
+            mode: '0440'
+            validate: 'visudo -cf %s'
 
         - name: Ensure the home directory exists for user $USER and is owned by them
           become: yes
