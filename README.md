@@ -1,5 +1,12 @@
 ### Easy Inventory Key Rotation For Ansible
-I manage 400+ devices, so this script lets me input a file containing a one per line listing of all the hostnames in my Tailscale network, and my ansible inventory.
+##### The problem
+I manage 400+ devices, nearly all of them are connected via cellular modems, and this means that a lot of them go offline.
+I needed a solution where I could implement ansible-pull rather than push to account for the fact that half of my units might be offline either due to poor coverage or just not being deployed.
+As such I needed to allow for two way communication between the ansible server and the devices it was controlling, and make sure that that was secure.
+I needed the ability to push a playbook that creates a cron job to then perform the ansible pull. 
+
+##### The solution
+So this script lets me input a file containing a one per line listing of all the hostnames in my Tailscale network, and my ansible inventory.
 You need to have a list of hosts in a format ansible will recognise i.e:
 ```
 192.168.0.1
