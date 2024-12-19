@@ -2,13 +2,66 @@
 # SSH Key Management - Crabman Stan
 # This Script generates a public/private key pair for each device within the text file provided and then copies
 # the key pair to the remote device via ansible
+# Once copied it then removes the private key from the ansible server and appends the public key of the remote device to the git user
 
-# Variables
-KEY_DIR="WHERE YOU WANT TO STORE YOUR KEYS"          # Directory to store the keys
-USER="USER ON REMOTE HOST"                           # The user on the target hosts
-GIT_USER="USER ON ANSIBLE SERVER"                           # The user on the Ansible server
-INVENTORY_FILE="YOUR ANSIBLE INVENTORY.yaml"  # Inventory file
-HOSTS_FILE="LIST OF HOSTNAMES/IP ADDRESSES"                  # File containing hostnames
+# Variables - defined first so they can be used as defaults
+KEY_DIR="WHERE THE KEYS WILL BE STORED"
+USER="REMOTE USER"
+GIT_USER="GIT USER ON SERVER"
+INVENTORY_FILE="INVENTORY.YAML"
+HOSTS_FILE="LIST OF HOSTNAMES"
+
+# Function to get user input for variables
+get_user_input() {
+    read -p "Enter directory to store keys [$KEY_DIR]: " input_key_dir
+    KEY_DIR=${input_key_dir:-"DEFAULT DIRECTORY"}
+
+    read -p "Enter target user [$USER]: " input_user
+    USER=${input_user:-"DEFAULT REMOTE USER"}
+
+    read -p "Enter git user [$GIT_USER]: " input_git_user
+    GIT_USER=${input_git_user:-"DEFAULT LOCAL GIT USER"}
+
+    read -p "Enter inventory file path [$INVENTORY_FILE]: " input_inventory
+    INVENTORY_FILE=${input_inventory:-"DEFAULT INVENTORY"}
+
+    read -p "Enter hosts file name [$HOSTS_FILE]: " input_hosts
+    HOSTS_FILE=${input_hosts:-"DEFAULT HOSTS LIST"}
+
+    # Validate inputs
+    if [[ ! -f "$INVENTORY_FILE" ]]; then
+        echo "Error: Inventory file does not exist!"
+        exit 1
+    fi
+
+    if [[ ! -f "$HOSTS_FILE" ]]; then
+        echo "Error: Hosts file does not exist!"
+        exit 1
+    fi
+
+    # Create key directory if it doesn't exist
+    mkdir -p "$KEY_DIR"
+}
+
+# Function to display mode selection menu
+select_mode() {
+    echo "Select operation mode:"
+    echo "1) Generate and push SSH keys"
+    echo "2) Push existing SSH keys only"
+    read -p "Enter choice [1-2]: " mode_choice
+
+    case $mode_choice in
+        1) return 0 ;; # Generate and push
+        2) return 1 ;; # Push only
+        *) echo "Invalid choice"; exit 1 ;;
+    esac
+}
+
+# Remove the duplicate variable declarations here
+# Start main script execution
+get_user_input
+select_mode
+GENERATE_KEYS=$?
 
 # Step 1: Read hosts from the specified file
 echo "Reading hosts from $HOSTS_FILE..."
@@ -19,11 +72,19 @@ fi
 
 # Step 2: Iterate over each host to generate and push unique SSH keys
 while IFS= read -r HOST; do
-    echo "Generating SSH key pair for $HOST..."
-    
-    # Generate a unique SSH key pair for the host
+    echo "Processing $HOST..."
     KEY_PATH="$KEY_DIR/id_ed25519_$HOST"
-    ssh-keygen -t ed25519 -f "$KEY_PATH" -N "" || { echo "Key generation failed for $HOST"; continue; }
+    
+    if [ $GENERATE_KEYS -eq 0 ]; then
+        echo "Generating SSH key pair for $HOST..."
+        ssh-keygen -t ed25519 -f "$KEY_PATH" -N "" || { echo "Key generation failed for $HOST"; continue; }
+    else
+        # Check if keys exist when in push-only mode
+        if [[ ! -f "$KEY_PATH" || ! -f "$KEY_PATH.pub" ]]; then
+            echo "Error: Keys for $HOST not found at $KEY_PATH"
+            continue
+        fi
+    fi
 
     # Step 3: Create Ansible Playbook to Push Keys
     PLAYBOOK_CONTENT=$(cat <<EOF
@@ -33,7 +94,7 @@ while IFS= read -r HOST; do
       vars:
         random_password: "{{ lookup('pipe', 'openssl rand -base64 32') }}"
       tasks:
-        - name: Ensure the user '$USER' exists
+        - name: Ensure the user '$USER' exists and has a psuedorandom password
           user:
             name: "$USER"
             state: present
@@ -128,8 +189,7 @@ EOF
         echo "Failed to copy public key to $GIT_USER's authorized_keys for $HOST" >> failed_to_append.txt
     fi
 
-    # Clean up the private key after use
-    # rm "$KEY_PATH"
+
 done < "$HOSTS_FILE"
 
-echo "SSH keys have been successfully pushed to all hosts and copied to $GIT_USER's authorized_keys."
+echo "SSH keys have been successfully processed for all hosts."
