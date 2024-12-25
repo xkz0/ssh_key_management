@@ -13,6 +13,16 @@ You need to have a list of hosts in a format ansible will recognise i.e:
 myhost.hostname.example
 host-001
 ```
+#First time setup:
+Make sure you define these variables in the .sh file, I'll probably change this to a menu prompt at some point:
+```
+KEY_DIR="WHERE THE KEYS WILL BE STORED"
+USER="REMOTE USER"
+GIT_USER="GIT USER ON SERVER"
+INVENTORY_FILE="INVENTORY.YAML"
+HOSTS_FILE="LIST OF HOSTNAMES"
+```
+
 You also need an Ansible inventory that it can use to access the devices, make sure you specify the username for the account you're connecting to the machine with (whether this is a provisioning/admin account or something) and the authentication method (ssh private key or password) within the inventory.
 
 It then generates a unique ssh private/public key for each device and saves that to the specified users directory on the ansible server, it then pushes that private and public key pair to the remote device.
