@@ -13,7 +13,7 @@ You need to have a list of hosts in a format ansible will recognise i.e:
 myhost.hostname.example
 host-001
 ```
-#First time setup:
+# First time setup:
 Make sure you define these variables in the .sh file, I'll probably change this to a menu prompt at some point:
 ```
 KEY_DIR="WHERE THE KEYS WILL BE STORED"
