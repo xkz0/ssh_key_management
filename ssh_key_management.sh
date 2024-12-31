@@ -303,15 +303,6 @@ retry_failed_hosts() {
     echo # New line after progress bar
 }
 
-# Replace the final echo statement with:
-if [[ -f "failed_to_connect.txt" && -s "failed_to_connect.txt" ]]; then
-    echo "Some hosts failed to connect. Failed hosts are listed in failed_to_connect.txt"
-    read -p "Would you like to retry these hosts? (y/n): " retry_choice
-    if [[ "$retry_choice" =~ ^[Yy]$ ]]; then
-        retry_failed_hosts "failed_to_connect.txt"
-    fi
-fi
-
 # Final status
 if [[ -f "failed_to_connect.txt" && -s "failed_to_connect.txt" ]]; then
     echo "Some hosts still failed to connect. Check failed_to_connect.txt for details."
@@ -320,20 +311,3 @@ elif [[ -f "failed_to_append.txt" && -s "failed_to_append.txt" ]]; then
 else
     echo "SSH keys have been successfully processed for all hosts."
 fi
-
-generate_inventory() {
-    # Add domain configuration
-    read -p "Enter Tailscale domain [$DOMAIN]: " input_domain
-    DOMAIN=${input_domain:-"example.ts.net"}
-
- 
-    cat << EOF > "$INVENTORY_FILE"
-# Ansible inventory generated from Tailscale custom data
----
-parent:
-  children:
-EOF
-
-    
-}
-
